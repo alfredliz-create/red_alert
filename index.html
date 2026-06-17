@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>CIAL Red Alert — Commercial Health Dashboard</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+html,body { width:100%; height:100%; font-family:'Segoe UI',system-ui,sans-serif; font-size:13px; background:#0d1b2e; color:#e2e8f0; }
+
+.view { width:100%; display:none; }
+.view.active { display:block; }
+
+.topbar {
+  background:rgba(8,16,35,0.95);
+  border-bottom:1px solid rgba(255,255,255,0.08);
+  padding:10px 18px;
+  display:flex; justify-content:space-between; align-items:center;
+}
+.logo { display:flex; align-items:center; gap:8px; }
+.pulse { width:10px; height:10px; background:#e53e3e; border-radius:50%;
+  box-shadow:0 0 8px #e53e3e; animation:blink 2s infinite; }
+.logo-txt { font-size:15px; font-weight:700; color:#fff; }
+.hd-right { display:flex; gap:8px; align-items:center; }
+.badge { background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.12);
+  padding:3px 10px; border-radius:5px; font-size:10px; color:#a0aec0; }
+.badge b { color:#90cdf4; }
+.live-pill { display:flex; align-items:center; gap:5px; font-size:10px; color:#68d391;
+  border:1px solid #276749; background:rgba(39,103,73,0.2); padding:3px 10px; border-radius:5px; }
+.ld { width:6px; height:6px; background:#68d391; border-radius:50%; animation:blink 2s infinite; }
+.back-btn { background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15);
+  color:#e2e8f0; padding:4px 12px; border-radius:6px; cursor:pointer; font-size:11px;
+  display:flex; align-items:center; gap:5px; }
+.back-btn:hover { background:rgba(255,255,255,0.15); }
+
+.kpi-strip { display:flex; gap:8px; padding:10px 18px; background:rgba(8,16,35,0.7); }
+.kpi { flex:1; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1);
+  border-radius:8px; padding:8px 12px; }
+.kpi-l { font-size:9px; color:#718096; text-transform:uppercase; letter-spacing:.6px; }
+.kpi-v { font-size:19px; font-weight:700; color:#fff; margin:2px 0; }
+.kpi-s { font-size:10px; }
+.bar { height:3px; background:rgba(255,255,255,0.1); border-radius:2px; overflow:hidden; margin-top:5px; }
+.bf { height:100%; border-radius:2px; transition:width .6s ease; }
+
+.country { cursor:default; transition:all .15s ease; }
+.country.clickable { cursor:pointer; }
+.country.clickable:hover { filter:brightness(1.4); }
+
+.map-wrap { position:relative; background:#1e4976; }
+.map-wrap svg { display:block; width:100%; }
+
+.tooltip {
+  position:absolute; background:rgba(8,16,35,0.95); border:1px solid rgba(255,255,255,0.15);
+  border-radius:7px; padding:8px 12px; pointer-events:none; z-index:50;
+  display:none; min-width:140px;
+}
+.tt-name { font-size:12px; font-weight:700; color:#fff; margin-bottom:4px; }
+.tt-status { font-size:10px; display:flex; align-items:center; gap:5px; }
+.tt-dot { width:7px; height:7px; border-radius:50%; }
+.tt-hint { font-size:9px; color:#4a5568; margin-top:4px; }
+
+.alert-bar {
+  margin:0; padding:10px 18px;
+  background:rgba(45,26,26,0.92); border-top:1px solid #92400e;
+  display:flex; align-items:center; gap:12px;
+}
+.al-body { flex:1; }
+.al-title { font-size:11px; font-weight:700; color:#f6ad55; margin-bottom:3px; }
+.al-txt { font-size:10px; color:#a0aec0; line-height:1.5; }
+.al-btn { background:#c05621; color:#fff; border:none; border-radius:5px;
+  padding:5px 13px; font-size:10px; font-weight:700; cursor:pointer; flex-shrink:0; }
+
+.detail-header {
+  padding:14px 18px;
+  display:flex; align-items:center; gap:14px;
+  border-bottom:1px solid rgba(255,255,255,0.08);
+}
+.dh-flag { font-size:28px; }
+.dh-info { flex:1; }
+.dh-name { font-size:18px; font-weight:700; color:#fff; }
+.dh-sub { font-size:10px; color:#718096; margin-top:2px; }
+.status-pill {
+  padding:5px 14px; border-radius:20px; font-size:11px; font-weight:700;
+  display:flex; align-items:center; gap:6px;
+}
+.status-pill.red { background:rgba(252,129,129,0.15); color:#fc8181; border:1px solid #fc818155; }
+.status-pill.green { background:rgba(104,211,145,0.15); color:#68d391; border:1px solid #68d39155; }
+.status-pill.yellow { background:rgba(246,224,94,0.15); color:#f6e05e; border:1px solid #f6e05e55; }
+.sp-dot { width:8px; height:8px; border-radius:50%; }
+
+.d-kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; padding:14px 18px; }
+.d-kpi { background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08); border-radius:9px; padding:12px 14px; }
+.d-kpi-l { font-size:9px; color:#718096; text-transform:uppercase; letter-spacing:.6px; margin-bottom:4px; }
+.d-kpi-v { font-size:22px; font-weight:700; color:#fff; }
+.d-kpi-s { font-size:10px; margin-top:2px; }
+.d-bar { height:4px; background:rgba(255,255,255,0.1); border-radius:2px; overflow:hidden; margin-top:8px; }
+.d-bf { height:100%; border-radius:2px; }
+
+.month-prog { padding:0 18px 14px; }
+.mp-label { font-size:10px; color:#718096; margin-bottom:5px; display:flex; justify-content:space-between; }
+.mp-bar { height:6px; background:rgba(255,255,255,0.1); border-radius:3px; overflow:hidden; }
+.mp-fill { height:100%; background:linear-gradient(90deg,#4a90d9,#63b3ed); border-radius:3px; }
+
+.actions-section { padding:0 18px 14px; }
+.section-title { font-size:10px; color:#718096; text-transform:uppercase; letter-spacing:.7px; margin-bottom:8px; }
+.action-item {
+  background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);
+  border-left:3px solid; border-radius:7px; padding:9px 12px; margin-bottom:6px;
+  display:flex; align-items:flex-start; gap:10px;
+}
+.ai-icon { font-size:14px; flex-shrink:0; margin-top:1px; }
+.ai-txt { flex:1; }
+.ai-title { font-size:11px; font-weight:600; color:#e2e8f0; margin-bottom:2px; }
+.ai-desc { font-size:10px; color:#718096; line-height:1.4; }
+.ai-tag { font-size:9px; padding:2px 7px; border-radius:10px; margin-left:auto; flex-shrink:0; align-self:flex-start; font-weight:600; }
+
+.okr-section { padding:0 18px 16px; }
+.okr-row { display:flex; align-items:center; gap:10px; margin-bottom:7px; }
+.okr-lbl { font-size:10px; color:#a0aec0; width:180px; flex-shrink:0; }
+.okr-bar { flex:1; height:6px; background:rgba(255,255,255,0.1); border-radius:3px; overflow:hidden; }
+.okr-fill { height:100%; border-radius:3px; }
+.okr-pct { font-size:10px; width:32px; text-align:right; flex-shrink:0; }
+
+.g{color:#68d391;} .y{color:#f6e05e;} .r{color:#fc8181;}
+.bg{background:#68d391;} .by{background:#f6e05e;} .br{background:#fc8181;}
+.b-blue{background:#63b3ed;}
+
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+@keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+.view.active { animation: fadeIn .25s ease; }
+</style>
+</head>
+<body>
+
+<!-- HQ VIEW -->
+<div id="hq-view" class="view active">
+  <div class="topbar">
+    <div class="logo">
+      <div class="pulse"></div>
+      <div class="logo-txt">CIAL Red Alert</div>
+    </div>
+    <div class="hd-right">
+      <div class="badge">Q2 2026 · <b>Jun 17/30</b></div>
+      <div class="badge">HQ · <b>All Markets</b></div>
+      <div class="live-pill"><div class="ld"></div> Live · Salesforce</div>
+    </div>
+  </div>
+
+  <div class="kpi-strip">
+    <div class="kpi">
+      <div class="kpi-l">Total Revenue vs Target</div>
+      <div class="kpi-v">78%</div>
+      <div class="kpi-s g">▲ on track</div>
+      <div class="bar"><div class="bf bg" style="width:78%"></div></div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-l">Pipeline Coverage</div>
+      <div class="kpi-v">2.4x</div>
+      <div class="kpi-s y">— monitor</div>
+      <div class="bar"><div class="bf by" style="width:60%"></div></div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-l">Renewal Rate QTD</div>
+      <div class="kpi-v">84%</div>
+      <div class="kpi-s g">▲ +3pts vs Q1</div>
+      <div class="bar"><div class="bf bg" style="width:84%"></div></div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-l">New Logos QTD</div>
+      <div class="kpi-v">11/20</div>
+      <div class="kpi-s r">▼ behind pace</div>
+      <div class="bar"><div class="bf br" style="width:55%"></div></div>
+    </div>
+  </div>
+
+  <div class="map-wrap" id="map-wrap">
+    <svg id="map-svg" viewBox="0 0 700 520" xmlns="http://www.w3.org/2000/svg">
+      <rect width="700" height="520" fill="#1e4976"/>
+      <g stroke="#1a3d6e" stroke-width="0.5" opacity="0.5">
+        <line x1="0" y1="130" x2="700" y2="130"/><line x1="0" y1="260" x2="700" y2="260"/>
+        <line x1="0" y1="390" x2="700" y2="390"/><line x1="175" y1="0" x2="175" y2="520"/>
+        <line x1="350" y1="0" x2="350" y2="520"/><line x1="525" y1="0" x2="525" y2="520"/>
+      </g>
+      <path class="country" d="M148,158 L178,154 L185,166 L178,178 L158,183 L146,175 Z" fill="#2a4a6e" stroke="#3a6a9e" stroke-width="0.8"/>
+      <path class="country" d="M178,195 L220,189 L230,204 L224,225 L200,232 L178,218 Z" fill="#2a4a6e" stroke="#3a6a9e" stroke-width="0.8"/>
+      <path class="country" d="M222,185 L278,182 L288,196 L278,214 L244,218 L222,205 Z" fill="#2a4a6e" stroke="#3a6a9e" stroke-width="0.8"/>
+      <path class="country" d="M156,232 L185,226 L190,248 L178,260 L156,253 Z" fill="#2a4a6e" stroke="#3a6a9e" stroke-width="0.8"/>
+      <path class="country" d="M158,260 L200,252 L210,280 L207,320 L180,328 L152,308 L146,282 Z" fill="#2a4a6e" stroke="#3a6a9e" stroke-width="0.8"/>
+      <path class="country" d="M205,282 L248,274 L256,302 L252,334 L224,340 L204,318 Z" fill="#2a4a6e" stroke="#3a6a9e" stroke-width="0.8"/>
+      <path class="country" d="M256,334 L296,326 L302,350 L284,362 L255,357 Z" fill="#2a4a6e" stroke="#3a6a9e" stroke-width="0.8"/>
+      <path class="country" d="M175,328 L202,322 L210,360 L213,410 L207,456 L196,462 L182,440 L178,396 L172,356 Z" fill="#2a4a6e" stroke="#3a6a9e" stroke-width="0.8"/>
+      <path class="country" d="M302,380 L328,375 L335,394 L318,408 L300,400 Z" fill="#2a4a6e" stroke="#3a6a9e" stroke-width="0.8"/>
+
+      <path id="path-mexico" class="country clickable"
+        d="M58,98 L198,92 L213,106 L208,128 L188,140 L182,158 L163,170 L146,181 L126,174 L106,188 L84,178 L68,156 L56,128 Z"
+        fill="#3d1212" stroke="#fc8181" stroke-width="2.5" onclick="showMarket('mexico')"/>
+      <ellipse cx="135" cy="140" rx="80" ry="45" fill="#fc8181" opacity="0.07" pointer-events="none"/>
+      <circle cx="135" cy="140" r="6" fill="#fc8181" pointer-events="none"/>
+      <circle cx="135" cy="140" r="13" fill="none" stroke="#fc8181" stroke-width="1.5" opacity="0.45" pointer-events="none"/>
+      <circle cx="135" cy="140" r="21" fill="none" stroke="#fc8181" stroke-width="0.7" opacity="0.2" pointer-events="none"/>
+      <text x="135" y="118" text-anchor="middle" font-size="8" fill="#fc818188" font-weight="700" font-family="Segoe UI,sans-serif" pointer-events="none">MEXICO ↗</text>
+
+      <path id="path-brazil" class="country clickable"
+        d="M285,182 L368,175 L430,192 L480,215 L508,248 L514,292 L504,338 L480,375 L442,396 L385,402 L330,396 L294,370 L275,334 L268,290 L272,240 Z"
+        fill="#0e2a18" stroke="#68d391" stroke-width="2.5" onclick="showMarket('brazil')"/>
+      <ellipse cx="390" cy="290" rx="130" ry="95" fill="#68d391" opacity="0.06" pointer-events="none"/>
+      <circle cx="390" cy="288" r="6" fill="#68d391" pointer-events="none"/>
+      <circle cx="390" cy="288" r="13" fill="none" stroke="#68d391" stroke-width="1.5" opacity="0.45" pointer-events="none"/>
+      <circle cx="390" cy="288" r="21" fill="none" stroke="#68d391" stroke-width="0.7" opacity="0.2" pointer-events="none"/>
+      <text x="390" y="265" text-anchor="middle" font-size="9" fill="#68d39188" font-weight="700" font-family="Segoe UI,sans-serif" pointer-events="none">BRAZIL ↗</text>
+
+      <path id="path-argentina" class="country clickable"
+        d="M210,366 L338,356 L360,376 L360,418 L347,458 L328,492 L305,505 L280,490 L260,460 L250,425 L244,388 Z"
+        fill="#26220a" stroke="#f6e05e" stroke-width="2.5" onclick="showMarket('argentina')"/>
+      <ellipse cx="302" cy="432" rx="65" ry="65" fill="#f6e05e" opacity="0.06" pointer-events="none"/>
+      <circle cx="300" cy="428" r="6" fill="#f6e05e" pointer-events="none"/>
+      <circle cx="300" cy="428" r="13" fill="none" stroke="#f6e05e" stroke-width="1.5" opacity="0.45" pointer-events="none"/>
+      <circle cx="300" cy="428" r="21" fill="none" stroke="#f6e05e" stroke-width="0.7" opacity="0.2" pointer-events="none"/>
+      <text x="300" y="406" text-anchor="middle" font-size="8" fill="#f6e05e88" font-weight="700" font-family="Segoe UI,sans-serif" pointer-events="none">ARGENTINA ↗</text>
+    </svg>
+    <div class="tooltip" id="tooltip">
+      <div class="tt-name" id="tt-name"></div>
+      <div class="tt-status"><div class="tt-dot" id="tt-dot"></div><span id="tt-status-txt"></span></div>
+      <div class="tt-hint">Click to open market view</div>
+    </div>
+  </div>
+
+  <div class="alert-bar">
+    <div style="font-size:15px;flex-shrink:0">⚠️</div>
+    <div class="al-body">
+      <div class="al-title">Mid-Period Alert · Auto-generated Jun 15, 2026</div>
+      <div class="al-txt">Mexico new logo pace 40% below target — 13 days remaining. Brazil pipeline nearing 2x floor. Click a market on the map for recommended actions.</div>
+    </div>
+    <button class="al-btn">View All →</button>
+  </div>
+</div>
+
+<!-- DETAIL: MEXICO -->
+<div id="detail-mexico" class="view">
+  <div class="topbar">
+    <div class="logo"><div class="pulse"></div><div class="logo-txt">CIAL Red Alert</div></div>
+    <div class="hd-right">
+      <button class="back-btn" onclick="showHQ()">← All Markets</button>
+      <div class="badge">Q2 2026 · <b>Jun 17/30</b></div>
+      <div class="live-pill"><div class="ld"></div> Live</div>
+    </div>
+  </div>
+  <div class="detail-header">
+    <div class="dh-flag">🇲🇽</div>
+    <div class="dh-info">
+      <div class="dh-name">Mexico</div>
+      <div class="dh-sub">Hybrid model · Owner: Jorge Dabah · 13 days left in period</div>
+    </div>
+    <div class="status-pill red"><div class="sp-dot br"></div> At Risk</div>
+  </div>
+  <div class="d-kpis">
+    <div class="d-kpi"><div class="d-kpi-l">Revenue vs Target</div><div class="d-kpi-v r">61%</div><div class="d-kpi-s r">▼ 19pts below pace</div><div class="d-bar"><div class="d-bf br" style="width:61%"></div></div></div>
+    <div class="d-kpi"><div class="d-kpi-l">Pipeline Coverage</div><div class="d-kpi-v r">1.6x</div><div class="d-kpi-s r">▼ below 2x floor</div><div class="d-bar"><div class="d-bf br" style="width:40%"></div></div></div>
+    <div class="d-kpi"><div class="d-kpi-l">Renewal Rate QTD</div><div class="d-kpi-v y">79%</div><div class="d-kpi-s y">— needs attention</div><div class="d-bar"><div class="d-bf by" style="width:79%"></div></div></div>
+    <div class="d-kpi"><div class="d-kpi-l">New Logos QTD</div><div class="d-kpi-v r">3 / 8</div><div class="d-kpi-s r">▼ 40% below pace</div><div class="d-bar"><div class="d-bf br" style="width:38%"></div></div></div>
+  </div>
+  <div class="month-prog">
+    <div class="mp-label"><span>Month progress</span><span style="color:#90cdf4">Day 17 of 30 (57%)</span></div>
+    <div class="mp-bar"><div class="mp-fill" style="width:57%"></div></div>
+  </div>
+  <div class="actions-section">
+    <div class="section-title">⚡ AI-Recommended Actions</div>
+    <div class="action-item" style="border-left-color:#fc8181"><div class="ai-icon">🎯</div><div class="ai-txt"><div class="ai-title">Activate 3 Goji Berry trigger leads in pipeline</div><div class="ai-desc">Fintech clients showing 85%+ intent score with open pipeline. Assign to top SDR — avg close cycle 12 days.</div></div><div class="ai-tag" style="background:rgba(252,129,129,0.15);color:#fc8181">Urgent</div></div>
+    <div class="action-item" style="border-left-color:#f6e05e"><div class="ai-icon">📞</div><div class="ai-txt"><div class="ai-title">Schedule renewal check-ins for 4 at-risk SME accounts</div><div class="ai-desc">Accounts with Paydex drop >10pts in last 30 days. Renewal window opens within 45 days.</div></div><div class="ai-tag" style="background:rgba(246,224,94,0.15);color:#f6e05e">This week</div></div>
+    <div class="action-item" style="border-left-color:#63b3ed"><div class="ai-icon">📊</div><div class="ai-txt"><div class="ai-title">Push pipeline review with Jorge — 6 deals stalled 21+ days</div><div class="ai-desc">6 enterprise deals have had no Gong or Salesforce activity. Schedule before Jun 22.</div></div><div class="ai-tag" style="background:rgba(99,179,237,0.15);color:#63b3ed">Next 5 days</div></div>
+  </div>
+  <div class="okr-section">
+    <div class="section-title">OKR Contribution → Global</div>
+    <div class="okr-row"><div class="okr-lbl">Revenue Growth 20% YoY</div><div class="okr-bar"><div class="okr-fill br" style="width:55%"></div></div><div class="okr-pct r">55%</div></div>
+    <div class="okr-row"><div class="okr-lbl">NRR ≥ 105%</div><div class="okr-bar"><div class="okr-fill by" style="width:68%"></div></div><div class="okr-pct y">68%</div></div>
+    <div class="okr-row"><div class="okr-lbl">Platform Attach Rate 40%</div><div class="okr-bar"><div class="okr-fill by" style="width:72%"></div></div><div class="okr-pct y">72%</div></div>
+  </div>
+</div>
+
+<!-- DETAIL: BRAZIL -->
+<div id="detail-brazil" class="view">
+  <div class="topbar">
+    <div class="logo"><div class="pulse"></div><div class="logo-txt">CIAL Red Alert</div></div>
+    <div class="hd-right">
+      <button class="back-btn" onclick="showHQ()">← All Markets</button>
+      <div class="badge">Q2 2026 · <b>Jun 17/30</b></div>
+      <div class="live-pill"><div class="ld"></div> Live</div>
+    </div>
+  </div>
+  <div class="detail-header">
+    <div class="dh-flag">🇧🇷</div>
+    <div class="dh-info">
+      <div class="dh-name">Brazil</div>
+      <div class="dh-sub">Hunter-farm model · Owner: Felippe / Davidson · 13 days left in period</div>
+    </div>
+    <div class="status-pill green"><div class="sp-dot bg"></div> On Track</div>
+  </div>
+  <div class="d-kpis">
+    <div class="d-kpi"><div class="d-kpi-l">Revenue vs Target</div><div class="d-kpi-v g">82%</div><div class="d-kpi-s g">▲ ahead of pace</div><div class="d-bar"><div class="d-bf bg" style="width:82%"></div></div></div>
+    <div class="d-kpi"><div class="d-kpi-l">Pipeline Coverage</div><div class="d-kpi-v y">2.1x</div><div class="d-kpi-s y">— approaching 2x floor</div><div class="d-bar"><div class="d-bf by" style="width:52%"></div></div></div>
+    <div class="d-kpi"><div class="d-kpi-l">Renewal Rate QTD</div><div class="d-kpi-v g">91%</div><div class="d-kpi-s g">▲ best in region</div><div class="d-bar"><div class="d-bf bg" style="width:91%"></div></div></div>
+    <div class="d-kpi"><div class="d-kpi-l">New Logos QTD</div><div class="d-kpi-v g">5 / 8</div><div class="d-kpi-s g">▲ on pace</div><div class="d-bar"><div class="d-bf bg" style="width:63%"></div></div></div>
+  </div>
+  <div class="month-prog">
+    <div class="mp-label"><span>Month progress</span><span style="color:#90cdf4">Day 17 of 30 (57%)</span></div>
+    <div class="mp-bar"><div class="mp-fill" style="width:57%"></div></div>
+  </div>
+  <div class="actions-section">
+    <div class="section-title">⚡ AI-Recommended Actions</div>
+    <div class="action-item" style="border-left-color:#f6e05e"><div class="ai-icon">🔋</div><div class="ai-txt"><div class="ai-title">Pipeline below 2x — add 4 qualified opps before Jun 22</div><div class="ai-desc">Current 2.1x historically drops to 1.8x in final 10 days. Prospect 4 new enterprise accounts this week.</div></div><div class="ai-tag" style="background:rgba(246,224,94,0.15);color:#f6e05e">Monitor</div></div>
+    <div class="action-item" style="border-left-color:#68d391"><div class="ai-icon">🏆</div><div class="ai-txt"><div class="ai-title">Decision engine upsell — 3 existing clients eligible</div><div class="ai-desc">Clients using legacy risk models with Paydex data. Eligible for C360 upgrade. Assign solution specialist.</div></div><div class="ai-tag" style="background:rgba(104,211,145,0.15);color:#68d391">Opportunity</div></div>
+    <div class="action-item" style="border-left-color:#63b3ed"><div class="ai-icon">📋</div><div class="ai-txt"><div class="ai-title">Share Brazil renewal playbook with Mexico & Argentina</div><div class="ai-desc">91% renewal rate methodology should be documented. Aricela to coordinate knowledge hub upload.</div></div><div class="ai-tag" style="background:rgba(99,179,237,0.15);color:#63b3ed">Share</div></div>
+  </div>
+  <div class="okr-section">
+    <div class="section-title">OKR Contribution → Global</div>
+    <div class="okr-row"><div class="okr-lbl">Revenue Growth 20% YoY</div><div class="okr-bar"><div class="okr-fill bg" style="width:82%"></div></div><div class="okr-pct g">82%</div></div>
+    <div class="okr-row"><div class="okr-lbl">NRR ≥ 105%</div><div class="okr-bar"><div class="okr-fill bg" style="width:88%"></div></div><div class="okr-pct g">88%</div></div>
+    <div class="okr-row"><div class="okr-lbl">Platform Attach Rate 40%</div><div class="okr-bar"><div class="okr-fill bg" style="width:91%"></div></div><div class="okr-pct g">91%</div></div>
+  </div>
+</div>
+
+<!-- DETAIL: ARGENTINA -->
+<div id="detail-argentina" class="view">
+  <div class="topbar">
+    <div class="logo"><div class="pulse"></div><div class="logo-txt">CIAL Red Alert</div></div>
+    <div class="hd-right">
+      <button class="back-btn" onclick="showHQ()">← All Markets</button>
+      <div class="badge">Q2 2026 · <b>Jun 17/30</b></div>
+      <div class="live-pill"><div class="ld"></div> Live</div>
+    </div>
+  </div>
+  <div class="detail-header">
+    <div class="dh-flag">🇦🇷</div>
+    <div class="dh-info">
+      <div class="dh-name">Argentina</div>
+      <div class="dh-sub">Hybrid model · 13 days left in period</div>
+    </div>
+    <div class="status-pill yellow"><div class="sp-dot by"></div> Needs Attention</div>
+  </div>
+  <div class="d-kpis">
+    <div class="d-kpi"><div class="d-kpi-l">Revenue vs Target</div><div class="d-kpi-v y">74%</div><div class="d-kpi-s y">— slightly behind</div><div class="d-bar"><div class="d-bf by" style="width:74%"></div></div></div>
+    <div class="d-kpi"><div class="d-kpi-l">Pipeline Coverage</div><div class="d-kpi-v g">2.3x</div><div class="d-kpi-s g">▲ healthy</div><div class="d-bar"><div class="d-bf bg" style="width:58%"></div></div></div>
+    <div class="d-kpi"><div class="d-kpi-l">Renewal Rate QTD</div><div class="d-kpi-v y">83%</div><div class="d-kpi-s y">— below 85% target</div><div class="d-bar"><div class="d-bf by" style="width:83%"></div></div></div>
+    <div class="d-kpi"><div class="d-kpi-l">New Logos QTD</div><div class="d-kpi-v y">2 / 4</div><div class="d-kpi-s y">— on minimum pace</div><div class="d-bar"><div class="d-bf by" style="width:50%"></div></div></div>
+  </div>
+  <div class="month-prog">
+    <div class="mp-label"><span>Month progress</span><span style="color:#90cdf4">Day 17 of 30 (57%)</span></div>
+    <div class="mp-bar"><div class="mp-fill" style="width:57%"></div></div>
+  </div>
+  <div class="actions-section">
+    <div class="section-title">⚡ AI-Recommended Actions</div>
+    <div class="action-item" style="border-left-color:#f6e05e"><div class="ai-icon">💼</div><div class="ai-txt"><div class="ai-title">Convert 2 stalled mid-funnel deals before period close</div><div class="ai-desc">2 enterprise deals in proposal stage with 30+ day silence. Use AI account brief + Seller Toolkit assets.</div></div><div class="ai-tag" style="background:rgba(246,224,94,0.15);color:#f6e05e">This week</div></div>
+    <div class="action-item" style="border-left-color:#f6e05e"><div class="ai-icon">🔄</div><div class="ai-txt"><div class="ai-title">Address 3 renewals approaching without contact</div><div class="ai-desc">Renewals due in 60 days with no recent Gong activity. Assign renewal intelligence workflow.</div></div><div class="ai-tag" style="background:rgba(246,224,94,0.15);color:#f6e05e">Monitor</div></div>
+    <div class="action-item" style="border-left-color:#63b3ed"><div class="ai-icon">📈</div><div class="ai-txt"><div class="ai-title">Pipeline strong — pull forward 1 Q3 deal to close in Jun</div><div class="ai-desc">2.3x coverage is healthy. Identify 1 high-intent deal earmarked for Q3 and accelerate.</div></div><div class="ai-tag" style="background:rgba(99,179,237,0.15);color:#63b3ed">Opportunity</div></div>
+  </div>
+  <div class="okr-section">
+    <div class="section-title">OKR Contribution → Global</div>
+    <div class="okr-row"><div class="okr-lbl">Revenue Growth 20% YoY</div><div class="okr-bar"><div class="okr-fill by" style="width:71%"></div></div><div class="okr-pct y">71%</div></div>
+    <div class="okr-row"><div class="okr-lbl">NRR ≥ 105%</div><div class="okr-bar"><div class="okr-fill by" style="width:74%"></div></div><div class="okr-pct y">74%</div></div>
+    <div class="okr-row"><div class="okr-lbl">Platform Attach Rate 40%</div><div class="okr-bar"><div class="okr-fill bg" style="width:80%"></div></div><div class="okr-pct g">80%</div></div>
+  </div>
+</div>
+
+<script>
+  const data = {
+    mexico:    { color:'#fc8181', status:'At Risk',         label:'Mexico' },
+    brazil:    { color:'#68d391', status:'On Track',        label:'Brazil' },
+    argentina: { color:'#f6e05e', status:'Needs Attention', label:'Argentina' }
+  };
+
+  function showMarket(id) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById('detail-' + id).classList.add('active');
+    window.scrollTo(0,0);
+  }
+
+  function showHQ() {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById('hq-view').classList.add('active');
+    window.scrollTo(0,0);
+  }
+
+  const tooltip = document.getElementById('tooltip');
+  const mapWrap = document.getElementById('map-wrap');
+
+  ['mexico','brazil','argentina'].forEach(id => {
+    const path = document.getElementById('path-' + id);
+    if (!path) return;
+    path.addEventListener('mouseenter', function() {
+      const d = data[id];
+      document.getElementById('tt-name').textContent = d.label;
+      document.getElementById('tt-dot').style.background = d.color;
+      document.getElementById('tt-status-txt').textContent = d.status;
+      document.getElementById('tt-status-txt').style.color = d.color;
+      tooltip.style.display = 'block';
+    });
+    path.addEventListener('mousemove', function(e) {
+      const rect = mapWrap.getBoundingClientRect();
+      tooltip.style.left = Math.min(e.clientX - rect.left + 12, rect.width - 160) + 'px';
+      tooltip.style.top = (e.clientY - rect.top - 10) + 'px';
+    });
+    path.addEventListener('mouseleave', function() {
+      tooltip.style.display = 'none';
+    });
+  });
+</script>
+</body>
+</html>
